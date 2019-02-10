@@ -2,17 +2,23 @@ package com.example.jairoorjuela.pruebabluetooth;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.nfc.Tag;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Set;
+import java.util.UUID;
 
 public class BluetoothActivity extends AppCompatActivity {
 
@@ -21,7 +27,7 @@ public class BluetoothActivity extends AppCompatActivity {
 
     TextView mStatusBlueTV, mPairedTV;
     ImageView mBlueIV;
-    Button mOnBtn, mOffBtn, mDiscoverBtn, mPairedBtn;
+    Button mOnBtn, mOffBtn, mDiscoverBtn, mPairedBtn, mSendPBtn;
 
     BluetoothAdapter mBlueAdapter;
 
@@ -37,6 +43,7 @@ public class BluetoothActivity extends AppCompatActivity {
         mOffBtn = findViewById(R.id.offBtn);
         mDiscoverBtn = findViewById(R.id.discoverableBtn);
         mPairedBtn = findViewById(R.id.pairedBtn);
+        mSendPBtn = findViewById(R.id.sendPBtn);
 
         //Adaptre Bluetooth
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -107,6 +114,25 @@ public class BluetoothActivity extends AppCompatActivity {
                         mPairedTV.append("\nDevice" + device.getName() + "," + device);
                     }
                 }
+                else {
+                    ShowToast("Turn on Bluetooth to get paired devices.");
+                }
+            }
+        });
+
+        mSendPBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mBlueAdapter.isEnabled()){
+                    mPairedTV.setText("Paired Devices");
+                    Set<BluetoothDevice> devices = mBlueAdapter.getBondedDevices();
+                    for(BluetoothDevice device: devices){
+                        if(device.getName().equals("HC-06")){
+                            ShowToast("Encontrado, enviando mensaje.");
+                            sendDataToPairedDevice("P",device);
+                        }
+                    }
+                }
                 else{
                     ShowToast("Turn on Bluetooth to get paired devices.");
                 }
@@ -128,6 +154,18 @@ public class BluetoothActivity extends AppCompatActivity {
                 break;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void sendDataToPairedDevice(String message, BluetoothDevice device){
+        byte[] toSend = message.getBytes();
+        try{
+            UUID applicationUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+            BluetoothSocket socket = device.createInsecureRfcommSocketToServiceRecord(applicationUUID);
+            OutputStream mmOutStream = socket.getOutputStream();
+            mmOutStream.write(toSend);
+        } catch (IOException e){
+
+        }
     }
 
     private void ShowToast(String msg){
