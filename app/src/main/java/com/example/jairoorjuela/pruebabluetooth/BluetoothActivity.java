@@ -25,9 +25,15 @@ public class BluetoothActivity extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 0;
     private static final int REQUEST_DISCOVER_BT = 1;
 
+    UUID applicationUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    BluetoothSocket socket;
+    OutputStream mmOutStream;
+    String text = "P";
+    byte[] textBytes = text.getBytes();
+
     TextView mStatusBlueTV, mPairedTV;
     ImageView mBlueIV;
-    Button mOnBtn, mOffBtn, mDiscoverBtn, mPairedBtn, mSendPBtn;
+    Button mOnBtn, mOffBtn, mDiscoverBtn, mPairedBtn, mSendPBtn, mConnectBtn;
 
     BluetoothAdapter mBlueAdapter;
 
@@ -43,6 +49,7 @@ public class BluetoothActivity extends AppCompatActivity {
         mOffBtn = findViewById(R.id.offBtn);
         mDiscoverBtn = findViewById(R.id.discoverableBtn);
         mPairedBtn = findViewById(R.id.pairedBtn);
+        mConnectBtn = findViewById(R.id.conectBtn);
         mSendPBtn = findViewById(R.id.sendPBtn);
 
         //Adaptre Bluetooth
@@ -120,7 +127,7 @@ public class BluetoothActivity extends AppCompatActivity {
             }
         });
 
-        mSendPBtn.setOnClickListener(new View.OnClickListener() {
+        mConnectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(mBlueAdapter.isEnabled()){
@@ -128,13 +135,39 @@ public class BluetoothActivity extends AppCompatActivity {
                     Set<BluetoothDevice> devices = mBlueAdapter.getBondedDevices();
                     for(BluetoothDevice device: devices){
                         if(device.getName().equals("HC-06")){
-                            ShowToast("Encontrado, enviando mensaje.");
-                            sendDataToPairedDevice("P",device);
+                            try{
+                                socket = device.createInsecureRfcommSocketToServiceRecord(applicationUUID);
+                                mmOutStream = socket.getOutputStream();
+                                ShowToast("Conectando...");
+                                socket.connect();
+                                ShowToast("Conectado a HC-06");
+                            }
+                            catch(IOException e){
+
+                            }
                         }
                     }
                 }
                 else{
                     ShowToast("Turn on Bluetooth to get paired devices.");
+                }
+            }
+        });
+
+        mSendPBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (socket.isConnected()){
+                    try{
+                        mmOutStream = socket.getOutputStream();
+                        mmOutStream.write(textBytes);
+                    }
+                    catch (IOException e){
+
+                    }
+                }
+                else{
+                    ShowToast("No existe una coneccion.");
                 }
             }
         });
@@ -154,18 +187,6 @@ public class BluetoothActivity extends AppCompatActivity {
                 break;
         }
         super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    private void sendDataToPairedDevice(String message, BluetoothDevice device){
-        byte[] toSend = message.getBytes();
-        try{
-            UUID applicationUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-            BluetoothSocket socket = device.createInsecureRfcommSocketToServiceRecord(applicationUUID);
-            OutputStream mmOutStream = socket.getOutputStream();
-            mmOutStream.write(toSend);
-        } catch (IOException e){
-
-        }
     }
 
     private void ShowToast(String msg){
